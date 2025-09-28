@@ -1,0 +1,90 @@
+---
+- name: Install Prometheus dependencies
+  apt:
+    name:
+      - wget
+      - curl
+    state: present
+
+- name: Create Prometheus user
+  user:
+    name: prometheus
+    system: yes
+    shell: /bin/false
+
+- name: Create directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: prometheus
+    group: prometheus
+  loop:
+    - /etc/prometheus
+    - /var/lib/prometheus
+
+- name: Download and install Prometheus
+  unarchive:
+    src: "https://github.com/prometheus/prometheus/releases/download/v{{ prometheus_version }}/prometheus-{{ prometheus_version }}.linux-amd64.tar.gz"
+    dest: /tmp
+    remote_src: yes
+
+- name: Copy Prometheus binaries
+  copy:
+    src: "/tmp/prometheus-{{ prometheus_version }}.linux-amd64/prometheus"
+    dest: "/usr/local/bin/prometheus"
+    owner: prometheus
+    group: prometheus
+    mode: '0755'
+
+- name: Copy Prometheus configuration
+  template:
+    src: "prometheus.yml.j2"
+    dest: "/etc/prometheus/prometheus.yml"
+    owner: prometheus
+    group: prometheus
+  notify: restart prometheus
+
+- name: Create Prometheus service file
+  template:
+    src: "prometheus.service.j2"
+    dest: "/etc/systemd/system/prometheus.service"
+  notify: restart prometheus
+
+- name: Install Node Exporter
+  shell: |
+    wget https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz
+    tar xzf node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz
+    cp node_exporter-{{ node_exporter_version }}.linux-amd64/node_exporter /usr/local/bin/
+    chmod +x /usr/local/bin/node_exporter
+  args:
+    creates: /usr/local/bin/node_exporter
+
+- name: Create Node Exporter service
+  template:
+    src: "node-exporter.service.j2"
+    dest: "/etc/systemd/system/node-exporter.service"
+  notify: restart node-exporter
+
+- name: Install Grafana
+  apt:
+    name: grafana
+    state: present
+  vars:
+    ansible_package_manager: apt
+
+- name: Configure Grafana
+  template:
+    src: "grafana.ini.j2"
+    dest: "/etc/grafana/grafana.ini"
+  notify: restart grafana
+
+- name: Start and enable services
+  systemd:
+    name: "{{ item }}"
+    state: started
+    enabled: yes
+    daemon_reload: yes
+  loop:
+    - prometheus
+    - node-exporter
+    - grafana

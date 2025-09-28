@@ -1,0 +1,67 @@
+---
+- name: Update apt package cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Install system dependencies
+  apt:
+    name:
+      - python3
+      - python3-pip
+      - python3-venv
+      - nginx
+      - postgresql-client
+    state: present
+
+- name: Create application directory
+  file:
+    path: "/opt/{{ app_name }}"
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+
+- name: Copy application files
+  copy:
+    src: "{{ role_path }}/files/app/"
+    dest: "/opt/{{ app_name }}"
+    owner: ubuntu
+    group: ubuntu
+
+- name: Create Python virtual environment
+  pip:
+    requirements: "/opt/{{ app_name }}/requirements.txt"
+    virtualenv: "/opt/{{ app_name }}/venv"
+    virtualenv_python: python3
+
+- name: Create systemd service file
+  template:
+    src: "app.service.j2"
+    dest: "/etc/systemd/system/{{ app_name }}.service"
+  notify: restart app
+
+- name: Configure nginx
+  template:
+    src: "nginx.conf.j2"
+    dest: "/etc/nginx/sites-available/{{ app_name }}"
+  notify: restart nginx
+
+- name: Enable nginx site
+  file:
+    src: "/etc/nginx/sites-available/{{ app_name }}"
+    dest: "/etc/nginx/sites-enabled/{{ app_name }}"
+    state: link
+  notify: restart nginx
+
+- name: Remove default nginx site
+  file:
+    path: "/etc/nginx/sites-enabled/default"
+    state: absent
+  notify: restart nginx
+
+- name: Start and enable application service
+  systemd:
+    name: "{{ app_name }}"
+    state: started
+    enabled: yes
+    daemon_reload: yes

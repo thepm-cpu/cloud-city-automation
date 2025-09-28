@@ -1,0 +1,20 @@
+---
+# Global variables
+ansible_python_interpreter: /usr/bin/python3
+app_name: "cloud-city-app"
+app_port: 5000
+app_version: "1.0.0"
+
+# Database configuration
+db_host: "{{ groups['db_servers'][0] if groups['db_servers'] is defined else 'localhost' }}"
+db_name: "cloud_city_db"
+db_user: "app_user"
+db_password: "securepassword123"
+
+# Monitoring configuration
+prometheus_version: "2.47.0"
+grafana_version: "10.1.1"
+node_exporter_version: "1.6.1"
+
+# Alert configuration
+alert_manager_slack_webhook: "{{ slack_webhook | default('') }}"

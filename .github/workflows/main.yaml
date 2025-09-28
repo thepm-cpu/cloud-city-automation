@@ -1,0 +1,132 @@
+name: Deploy Cloud City Infrastructure
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  AWS_REGION: 'eu-north-1'
+  TF_VERSION: '1.5.0'
+  ENVIRONMENT: 'production'
+
+jobs:
+  terraform:
+    name: 'Terraform Plan/Apply'
+    runs-on: ubuntu-latest
+    environment: production
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: ${{ env.TF_VERSION }}
+
+    - name: Terraform Format
+      id: fmt
+      run: terraform fmt -check
+      working-directory: ./terraform
+
+    - name: Terraform Init
+      id: init
+      run: terraform init
+      working-directory: ./terraform
+
+    - name: Terraform Validate
+      id: validate
+      run: terraform validate
+      working-directory: ./terraform
+
+    - name: Terraform Plan
+      id: plan
+      run: terraform plan -var-file=environments/production.tfvars -var="key_name=devops-key"
+      working-directory: ./terraform
+      continue-on-error: false
+
+    - name: Terraform Apply
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      run: terraform apply -auto-approve -var-file=environments/production.tfvars -var="key_name=devops-key"
+      working-directory: ./terraform
+
+  ansible-config:
+    name: 'Ansible Configuration'
+    runs-on: ubuntu-latest
+    needs: terraform
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Wait for EC2 instances
+      run: sleep 180  # Wait for instances to be fully ready
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Install Ansible and dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install ansible boto3 botocore
+        ansible --version
+
+    - name: Create SSH key file
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/devops-key.pem
+        chmod 600 ~/.ssh/devops-key.pem
+
+    - name: Run Ansible playbook
+      run: |
+        cd ansible
+        ansible-playbook -i inventories/production/ec2.py playbooks/site.yml
+      env:
+        ANSIBLE_HOST_KEY_CHECKING: False
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+  health-check:
+    name: 'Health Check & Monitoring'
+    runs-on: ubuntu-latest
+    needs: ansible-config
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+    - name: Health Check Application
+      run: |
+        # Get ALB DNS from Terraform output
+        cd terraform
+        ALB_DNS=$(terraform output -raw alb_dns_name)
+        curl -f http://$ALB_DNS/health || exit 1
+
+    - name: Health Check Prometheus
+      run: |
+        cd terraform
+        PROMETHEUS_IP=$(terraform output -raw monitoring_server_ip)
+        curl -f http://$PROMETHEUS_IP:9090/-/healthy || exit 1
+
+    - name: Health Check Grafana
+      run: |
+        cd terraform
+        PROMETHEUS_IP=$(terraform output -raw monitoring_server_ip)
+        curl -f http://$PROMETHEUS_IP:3000/api/health || exit 1

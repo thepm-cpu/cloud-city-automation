@@ -1,0 +1,15 @@
+[Unit]
+Description=Cloud City Python Application
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/opt/{{ app_name }}
+Environment=DATABASE_URL=postgresql://{{ db_user }}:{{ db_password }}@{{ db_host }}/{{ db_name }}
+ExecStart=/opt/{{ app_name }}/venv/bin/gunicorn --bind 0.0.0.0:{{ app_port }} app:app
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

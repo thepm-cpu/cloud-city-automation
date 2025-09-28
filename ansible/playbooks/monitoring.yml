@@ -1,0 +1,5 @@
+---
+- name: Setup monitoring stack
+  hosts: monitoring_servers
+  roles:
+    - monitoring

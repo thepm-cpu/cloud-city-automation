@@ -1,0 +1,35 @@
+---
+- name: Install PostgreSQL
+  apt:
+    name: postgresql
+    state: present
+
+- name: Ensure database is started
+  systemd:
+    name: postgresql
+    state: started
+    enabled: yes
+
+- name: Create database user
+  postgresql_user:
+    name: "{{ db_user }}"
+    password: "{{ db_password }}"
+    role_attr_flags: "CREATEDB,LOGIN"
+
+- name: Create database
+  postgresql_db:
+    name: "{{ db_name }}"
+    owner: "{{ db_user }}"
+
+- name: Configure PostgreSQL to listen on all interfaces
+  lineinfile:
+    path: /etc/postgresql/*/main/postgresql.conf
+    regexp: '^#?listen_addresses\s*='
+    line: "listen_addresses = '*'"
+  notify: restart postgresql
+
+- name: Update pg_hba.conf to allow connections
+  lineinfile:
+    path: /etc/postgresql/*/main/pg_hba.conf
+    line: "host {{ db_name }} {{ db_user }} 0.0.0.0/0 md5"
+  notify: restart postgresql

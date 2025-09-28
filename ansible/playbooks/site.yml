@@ -1,0 +1,17 @@
+---
+- name: Configure database server
+  hosts: db_servers
+  roles:
+    - database
+
+- name: Configure application servers
+  hosts: app_servers
+  roles:
+    - app_server
+  vars:
+    db_host: "{{ hostvars[groups['db_servers'][0]]['ansible_host'] }}"
+
+- name: Configure monitoring server
+  hosts: monitoring_servers
+  roles:
+    - monitoring
