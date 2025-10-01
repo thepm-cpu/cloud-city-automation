@@ -17,11 +17,11 @@ provider "aws" {
 module "vpc" {
   source = "../../modules/vpc"
 
-  vpc_cidr            = var.vpc_cidr
-  public_subnet_cidrs = var.public_subnet_cidrs
+  vpc_cidr             = var.vpc_cidr
+  public_subnet_cidrs  = var.public_subnet_cidrs
   private_subnet_cidrs = var.private_subnet_cidrs
-  azs                 = var.azs
-  environment         = var.environment
+  azs                  = var.azs
+  environment          = var.environment
 }
 
 # 🚧 Build the Fences
@@ -53,9 +53,9 @@ module "compute" {
 module "load_balancer" {
   source = "../../modules/load_balancer"
 
-  vpc_id               = module.vpc.vpc_id
+  vpc_id                = module.vpc.vpc_id
   alb_security_group_id = module.security.alb_sg_id
-  public_subnet_ids    = module.vpc.public_subnet_ids
+  public_subnet_ids     = module.vpc.public_subnet_ids
 }
 
 # 👷 Deploy Emergency Builders
