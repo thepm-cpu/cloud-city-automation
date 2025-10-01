@@ -1,75 +1,50 @@
-# Cloud Provider
-terraform {
-  required_version = ">= 1.0"
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
-    }
-  }
-
-  backend "s3" {
-    # Will be configured in GitHub Actions
-  }
+# Outputs for the entire infrastructure
+output "vpc_id" {
+  description = "ID of the VPC"
+  value       = module.vpc.vpc_id
 }
 
-provider "aws" {
-  region = var.region
+output "alb_dns_name" {
+  description = "DNS name of the Application Load Balancer"
+  value       = module.load_balancer.alb_dns_name
 }
 
-# 🏡 Build the Estate
-module "vpc" {
-  source = "../../modules/vpc"
-  
-  vpc_cidr            = var.vpc_cidr
-  public_subnet_cidrs = var.public_subnet_cidrs
-  private_subnet_cidrs = var.private_subnet_cidrs
-  azs                 = var.azs
-  environment         = var.environment
+output "monitoring_server_ip" {
+  description = "Public IP address of the monitoring server"
+  value       = module.compute.monitoring_server_ip
 }
 
-# 🚧 Build the Fences
-module "security" {
-  source = "../../modules/security"
-  
-  vpc_id = module.vpc.vpc_id
-  my_ip  = var.my_ip
+output "public_subnet_ids" {
+  description = "List of public subnet IDs"
+  value       = module.vpc.public_subnet_ids
 }
 
-# 🪪 Create ID Cards
-module "iam" {
-  source = "../../modules/iam"
+output "app_security_group_id" {
+  description = "Security group ID for app servers"
+  value       = module.security.app_sg_id
 }
 
-# 🏠 Build the Houses
-module "compute" {
-  source = "../../modules/compute"
-  
-  app_security_group_id        = module.security.app_sg_id
-  monitoring_security_group_id = module.security.monitoring_sg_id
-  public_subnet_ids           = module.vpc.public_subnet_ids
-  key_name                    = var.key_name
-  app_instance_type           = var.app_instance_type
-  monitoring_instance_type    = var.monitoring_instance_type
+output "monitoring_security_group_id" {
+  description = "Security group ID for monitoring server"
+  value       = module.security.monitoring_sg_id
 }
 
-# 🚦 Deploy Traffic Police
-module "load_balancer" {
-  source = "../../modules/load_balancer"
-  
-  vpc_id               = module.vpc.vpc_id
-  alb_security_group_id = module.security.alb_sg_id
-  public_subnet_ids    = module.vpc.public_subnet_ids
+output "alb_security_group_id" {
+  description = "Security group ID for ALB"
+  value       = module.security.alb_sg_id
 }
 
-# 👷 Deploy Emergency Builders
-module "auto_scaling" {
-  source = "../../modules/auto_scaling"
-  
-  public_subnet_ids    = module.vpc.public_subnet_ids
-  launch_template_id   = module.compute.app_launch_template_id
-  target_group_arn     = module.load_balancer.target_group_arn
-  desired_capacity     = var.desired_capacity
-  max_size             = var.max_size
-  min_size             = var.min_size
+output "app_launch_template_id" {
+  description = "ID of the app launch template"
+  value       = module.compute.app_launch_template_id
+}
+
+output "target_group_arn" {
+  description = "ARN of the target group"
+  value       = module.load_balancer.target_group_arn
+}
+
+output "auto_scaling_group_name" {
+  description = "Name of the auto scaling group"
+  value       = module.auto_scaling.auto_scaling_group_name
 }

@@ -3,9 +3,9 @@ resource "aws_vpc" "cloud_city" {
   cidr_block           = var.vpc_cidr
   enable_dns_hostnames = true
   enable_dns_support   = true
-  
+
   tags = {
-    Name = "cloud-city-vpc"
+    Name    = "cloud-city-vpc"
     Project = "cloud-city-automation"
   }
 }
@@ -21,10 +21,10 @@ resource "aws_internet_gateway" "main_gate" {
 
 # 🛣️ Public Streets - Public Subnets
 resource "aws_subnet" "public_subnets" {
-  count             = length(var.public_subnet_cidrs)
-  vpc_id            = aws_vpc.cloud_city.id
-  cidr_block        = var.public_subnet_cidrs[count.index]
-  availability_zone = var.azs[count.index]
+  count                   = length(var.public_subnet_cidrs)
+  vpc_id                  = aws_vpc.cloud_city.id
+  cidr_block              = var.public_subnet_cidrs[count.index]
+  availability_zone       = var.azs[count.index]
   map_public_ip_on_launch = true
 
   tags = {

@@ -4,7 +4,7 @@ resource "aws_launch_template" "app_server" {
   image_id      = data.aws_ami.ubuntu.id
   instance_type = var.app_instance_type
   key_name      = var.key_name
-  
+
   iam_instance_profile {
     name = aws_iam_instance_profile.app_instance_profile.name
   }
@@ -39,7 +39,7 @@ resource "aws_instance" "monitoring_server" {
   subnet_id              = var.public_subnet_ids[0]
   vpc_security_group_ids = [var.monitoring_security_group_id]
   key_name               = var.key_name
-  
+
   iam_instance_profile {
     name = aws_iam_instance_profile.monitoring_instance_profile.name
   }
