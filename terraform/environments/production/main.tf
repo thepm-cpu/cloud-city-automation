@@ -43,10 +43,10 @@ module "compute" {
 
   app_security_group_id        = module.security.app_sg_id
   monitoring_security_group_id = module.security.monitoring_sg_id
-  public_subnet_ids           = module.vpc.public_subnet_ids
-  key_name                    = var.key_name
-  app_instance_type           = var.app_instance_type
-  monitoring_instance_type    = var.monitoring_instance_type
+  public_subnet_ids            = module.vpc.public_subnet_ids
+  key_name                     = var.key_name
+  app_instance_type            = var.app_instance_type
+  monitoring_instance_type     = var.monitoring_instance_type
 }
 
 # 🚦 Deploy Traffic Police

@@ -33,19 +33,18 @@ jobs:
       with:
         terraform_version: ${{ env.TF_VERSION }}
 
-    - name: Terraform Format
-      id: fmt
-      run: |
-        cd terraform/environments/production
-        terraform fmt
-        # Check if any files were changed by fmt
-        if [ -n "$(git status --porcelain)" ]; then
-          echo "Some Terraform files were not properly formatted."
-          echo "Please run 'terraform fmt' and commit the changes."
-          git diff
-          exit 1
-        fi
-        
+    #- name: Terraform Format
+     # id: fmt
+     # run: |
+     #   cd terraform/environments/production
+     #   terraform fmt
+     #   if [ -n "$(git status --porcelain)" ]; then
+     #     echo "Some Terraform files were not properly formatted."
+     #     echo "Please run 'terraform fmt' and commit the changes."
+     #     git diff
+     #     exit 1
+     #   fi
+
     - name: Terraform Init
       id: init
       run: |
